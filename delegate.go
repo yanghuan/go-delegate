@@ -16,12 +16,12 @@ func NewDelegate(actions ...ActionX) Delegate {
 
 	d := Delegate{actions: actions[:1]}
 	for i := 1; i < length; i++ {
-		d = d.CombineAction(actions[i])
+		d = d.Combine(actions[i])
 	}
 	return d
 }
 
-func (d Delegate) CombineAction(a ActionX) Delegate {
+func (d Delegate) Combine(a ActionX) Delegate {
 	if a == nil {
 		return d
 	}
@@ -63,7 +63,7 @@ func (d Delegate) CombineDelegate(follow Delegate) Delegate {
 	return Delegate{actions: actions}
 }
 
-func (d Delegate) RemoveAction(a ActionX) Delegate {
+func (d Delegate) Remove(a ActionX) Delegate {
 	if a == nil {
 		return d
 	}

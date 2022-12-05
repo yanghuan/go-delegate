@@ -37,7 +37,7 @@ func TestDelegateCombine(t *testing.T) {
 			s += "c"
 		}
 
-		d := Delegate{}.CombineAction(f1).CombineAction(f2).CombineAction(f3)
+		d := Delegate{}.Combine(f1).Combine(f2).Combine(f3)
 		d.Invoke()
 		So(s, ShouldEqual, "abc")
 	})
@@ -46,7 +46,7 @@ func TestDelegateCombine(t *testing.T) {
 		var s string
 		h := &testDelegateHelper{s: &s}
 
-		d := Delegate{}.CombineAction(h.f1).CombineAction(h.f2).CombineAction(h.f3)
+		d := Delegate{}.Combine(h.f1).Combine(h.f2).Combine(h.f3)
 		d.Invoke()
 		So(s, ShouldEqual, "abc")
 	})
@@ -67,42 +67,42 @@ func TestDelegateRemove(t *testing.T) {
 			s += "c"
 		}
 
-		d := Delegate{}.CombineAction(f1)
+		d := Delegate{}.Combine(f1)
 		d.Invoke()
 		So(s, ShouldEqual, "a")
 		s = ""
 
-		d = Delegate{}.CombineAction(f1).CombineAction(f2)
+		d = Delegate{}.Combine(f1).Combine(f2)
 		d.Invoke()
 		So(s, ShouldEqual, "ab")
 		s = ""
 
-		d = Delegate{}.CombineAction(f1).CombineDelegate(Delegate{}.CombineAction(f2).CombineAction(f3))
+		d = Delegate{}.Combine(f1).CombineDelegate(Delegate{}.Combine(f2).Combine(f3))
 		d.Invoke()
 		So(s, ShouldEqual, "abc")
 		s = ""
 
-		d = Delegate{}.CombineAction(f1).CombineAction(f2).CombineDelegate(Delegate{}.CombineAction(f2).CombineAction(f3))
+		d = Delegate{}.Combine(f1).Combine(f2).CombineDelegate(Delegate{}.Combine(f2).Combine(f3))
 		d.Invoke()
 		So(s, ShouldEqual, "abbc")
 		s = ""
 
-		d = Delegate{}.CombineAction(f1).CombineAction(f2).RemoveAction(f1)
+		d = Delegate{}.Combine(f1).Combine(f2).Remove(f1)
 		d.Invoke()
 		So(s, ShouldEqual, "b")
 		s = ""
 
-		d = Delegate{}.CombineAction(f1).CombineAction(f2).RemoveAction(f2)
+		d = Delegate{}.Combine(f1).Combine(f2).Remove(f2)
 		d.Invoke()
 		So(s, ShouldEqual, "a")
 		s = ""
 
-		d = Delegate{}.CombineAction(f1).CombineAction(f2).CombineAction(f1).RemoveAction(f1)
+		d = Delegate{}.Combine(f1).Combine(f2).Combine(f1).Remove(f1)
 		d.Invoke()
 		So(s, ShouldEqual, "ab")
 		s = ""
 
-		d = Delegate{}.CombineAction(f1).CombineAction(f2).CombineAction(f3).RemoveAction(f1).RemoveAction(f2)
+		d = Delegate{}.Combine(f1).Combine(f2).Combine(f3).Remove(f1).Remove(f2)
 		d.Invoke()
 		So(s, ShouldEqual, "c")
 		s = ""
@@ -112,42 +112,42 @@ func TestDelegateRemove(t *testing.T) {
 		var s string
 		h := &testDelegateHelper{s: &s}
 
-		d := Delegate{}.CombineAction(h.f1)
+		d := Delegate{}.Combine(h.f1)
 		d.Invoke()
 		So(s, ShouldEqual, "a")
 		s = ""
 
-		d = Delegate{}.CombineAction(h.f1).CombineAction(h.f2)
+		d = Delegate{}.Combine(h.f1).Combine(h.f2)
 		d.Invoke()
 		So(s, ShouldEqual, "ab")
 		s = ""
 
-		d = Delegate{}.CombineAction(h.f1).CombineDelegate(Delegate{}.CombineAction(h.f2).CombineAction(h.f3))
+		d = Delegate{}.Combine(h.f1).CombineDelegate(Delegate{}.Combine(h.f2).Combine(h.f3))
 		d.Invoke()
 		So(s, ShouldEqual, "abc")
 		s = ""
 
-		d = Delegate{}.CombineAction(h.f1).CombineAction(h.f2).CombineDelegate(Delegate{}.CombineAction(h.f2).CombineAction(h.f3))
+		d = Delegate{}.Combine(h.f1).Combine(h.f2).CombineDelegate(Delegate{}.Combine(h.f2).Combine(h.f3))
 		d.Invoke()
 		So(s, ShouldEqual, "abbc")
 		s = ""
 
-		d = Delegate{}.CombineAction(h.f1).CombineAction(h.f2).RemoveAction(h.f1)
+		d = Delegate{}.Combine(h.f1).Combine(h.f2).Remove(h.f1)
 		d.Invoke()
 		So(s, ShouldEqual, "b")
 		s = ""
 
-		d = Delegate{}.CombineAction(h.f1).CombineAction(h.f2).RemoveAction(h.f2)
+		d = Delegate{}.Combine(h.f1).Combine(h.f2).Remove(h.f2)
 		d.Invoke()
 		So(s, ShouldEqual, "a")
 		s = ""
 
-		d = Delegate{}.CombineAction(h.f1).CombineAction(h.f2).CombineAction(h.f1).RemoveAction(h.f1)
+		d = Delegate{}.Combine(h.f1).Combine(h.f2).Combine(h.f1).Remove(h.f1)
 		d.Invoke()
 		So(s, ShouldEqual, "ab")
 		s = ""
 
-		d = Delegate{}.CombineAction(h.f1).CombineAction(h.f2).CombineAction(h.f3).RemoveAction(h.f1).RemoveAction(h.f2)
+		d = Delegate{}.Combine(h.f1).Combine(h.f2).Combine(h.f3).Remove(h.f1).Remove(h.f2)
 		d.Invoke()
 		So(s, ShouldEqual, "c")
 		s = ""
