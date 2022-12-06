@@ -16,7 +16,7 @@ func (d Delegate) Combine(a FnX) Delegate {
 		return d
 	}
 
-	m := d.combineDelegate(multicastDelegate{invocations: []invocation{getInvocation(a)}})
+	m := d.combine(getInvocation(a))
 	return Delegate{m}
 }
 
@@ -47,6 +47,10 @@ type multicastDelegate struct {
 
 type invocation struct {
 	funcPtr, targetPtr uintptr
+}
+
+func (i invocation) Equals(other invocation) bool {
+	return i.funcPtr == other.funcPtr && i.targetPtr == other.targetPtr
 }
 
 func (d multicastDelegate) combine(a invocation) multicastDelegate {
@@ -84,30 +88,43 @@ func (d multicastDelegate) combineDelegate(follow multicastDelegate) multicastDe
 }
 
 func (d multicastDelegate) remove(a invocation) multicastDelegate {
-	lastIndex := len(d.invocations) - 1
-	i := lastIndex
-	for ; i >= 0; i-- {
-		if funcPtrEqual(d.invocations[i], a) {
-			break
-		}
-	}
+	return d.removeDelegate(multicastDelegate{invocations: []invocation{a}})
+}
 
-	if i == -1 {
+func (d multicastDelegate) removeDelegate(follow multicastDelegate) multicastDelegate {
+	followLen := len(follow.invocations)
+	if followLen == 0 {
 		return d
 	}
 
-	if i == lastIndex {
-		return multicastDelegate{invocations: d.invocations[:lastIndex]}
+	length := len(d.invocations)
+	diffLength := length - followLen
+	for i := diffLength; i >= 0; i-- {
+		if equalsInvocations(d.invocations, follow.invocations, i, followLen) {
+			var invocations []invocation
+			if i == 0 {
+				invocations = d.invocations[followLen:]
+			} else if i == diffLength {
+				invocations = d.invocations[:diffLength]
+			} else {
+				invocations := make([]invocation, diffLength)
+				copy(invocations, d.invocations[:i])
+				copy(invocations[i:], d.invocations[i+followLen:])
+			}
+			return multicastDelegate{invocations}
+		}
 	}
 
-	if i == 0 {
-		return multicastDelegate{invocations: d.invocations[1:]}
-	}
+	return d
+}
 
-	actions := make([]invocation, lastIndex)
-	copy(actions, d.invocations[:i])
-	copy(actions[i:], d.invocations[i+1:])
-	return multicastDelegate{invocations: actions}
+func equalsInvocations(a, b []invocation, start, count int) bool {
+	for i := 0; i < count; i++ {
+		if !a[start+i].Equals(b[i]) {
+			return false
+		}
+	}
+	return true
 }
 
 func trySetSlot(invocations []invocation, index int, invocation invocation) bool {
@@ -117,15 +134,11 @@ func trySetSlot(invocations []invocation, index int, invocation invocation) bool
 	}
 
 	cur := invocations[index]
-	if cur.funcPtr != 0 && funcPtrEqual(cur, invocation) {
+	if cur.funcPtr != 0 && cur.Equals(invocation) {
 		return true
 	}
 
 	return false
-}
-
-func funcPtrEqual(f1, f2 invocation) bool {
-	return f1.funcPtr == f2.funcPtr && f1.targetPtr == f2.targetPtr
 }
 
 func getInvocation(f interface{}) invocation {
