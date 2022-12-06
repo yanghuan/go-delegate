@@ -2,6 +2,7 @@ package delegate
 
 import (
 	"testing"
+	"unsafe"
 
 	. "github.com/smartystreets/goconvey/convey"
 )
@@ -10,15 +11,15 @@ type testDelegateHelper struct {
 	s *string
 }
 
-func (h *testDelegateHelper) f1(args ...interface{}) {
+func (h *testDelegateHelper) f1(_ ...interface{}) {
 	*h.s = *h.s + "a"
 }
 
-func (h *testDelegateHelper) f2(args ...interface{}) {
+func (h *testDelegateHelper) f2(_ ...interface{}) {
 	*h.s = *h.s + "b"
 }
 
-func (h *testDelegateHelper) f3(args ...interface{}) {
+func (h *testDelegateHelper) f3(_ ...interface{}) {
 	*h.s = *h.s + "c"
 }
 
@@ -50,6 +51,22 @@ func TestDelegateCombine(t *testing.T) {
 		d.Invoke()
 		So(s, ShouldEqual, "abc")
 	})
+
+	Convey("TestCombineSliceConflict", t, func() {
+		var s string
+		h := &testDelegateHelper{s: &s}
+
+		d := Delegate{}
+		println(uintptr(unsafe.Pointer(&d)))
+
+		d = d.Combine(h.f1).Combine(h.f2).Combine(h.f3)
+		e := d.Combine(h.f1)
+		d = d.Combine(h.f2)
+		d.Invoke()
+		e.Invoke()
+		So(s, ShouldEqual, "abcbabca")
+	})
+
 }
 
 func TestDelegateRemove(t *testing.T) {

@@ -1,7 +1,8 @@
 # go-delegate
-A delegate implementation of Go, similar to a [delegate in C#](https://learn.microsoft.com/en-us/dotnet/csharp/programming-guide/delegates/)
+A multicast delegate implementation of Go, similar to [delegate in C#](https://learn.microsoft.com/en-us/dotnet/csharp/programming-guide/delegates/)
 
-Example
+## Example
+no generics & variadic function
 ```
 func f1(args ...interface{}) {
 	println("f1")
@@ -24,4 +25,25 @@ func main() {
 }
 ```
 
+generics & one parameter
+```
+func f1(a int) {
+	println("f1", a)
+}
 
+func f2(a int) {
+	println("f2", a)
+}
+
+func f3(a int) {
+	println("f3", a)
+}
+
+func main() {
+	d := Action1[int]{}
+	d = d.Combine(f1)
+	d = d.Combine(f2)
+	d = d.Combine(f3)
+	d.Invoke()
+}
+```

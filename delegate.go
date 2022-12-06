@@ -1,77 +1,93 @@
 package delegate
 
-import "unsafe"
+import (
+	"sync/atomic"
+	"unsafe"
+)
 
-type ActionX func(args ...interface{})
+type FnX func(args ...interface{})
 
 type Delegate struct {
-	actions []ActionX
+	multicastDelegate
 }
 
-func NewDelegate(actions ...ActionX) Delegate {
-	length := len(actions)
-	if length == 0 {
-		return Delegate{actions: actions}
-	}
-
-	d := Delegate{actions: actions[:1]}
-	for i := 1; i < length; i++ {
-		d = d.Combine(actions[i])
-	}
-	return d
-}
-
-func (d Delegate) Combine(a ActionX) Delegate {
+func (d Delegate) Combine(a FnX) Delegate {
 	if a == nil {
 		return d
 	}
 
-	return d.CombineDelegate(Delegate{actions: []ActionX{a}})
+	m := d.combineDelegate(multicastDelegate{invocations: []invocation{getInvocation(a)}})
+	return Delegate{m}
 }
 
 func (d Delegate) CombineDelegate(follow Delegate) Delegate {
-	followLen := len(follow.actions)
+	m := d.combineDelegate(follow.multicastDelegate)
+	return Delegate{m}
+}
+
+func (d Delegate) Remove(a FnX) Delegate {
+	if a == nil {
+		return d
+	}
+
+	m := d.remove(getInvocation(a))
+	return Delegate{m}
+}
+
+func (d Delegate) Invoke(args ...interface{}) {
+	for _, invocation := range d.invocations {
+		funcVar := unsafe.Pointer(&invocation)
+		(*(*FnX)(unsafe.Pointer(&funcVar)))(args...)
+	}
+}
+
+type multicastDelegate struct {
+	invocations []invocation
+}
+
+type invocation struct {
+	funcPtr, targetPtr uintptr
+}
+
+func (d multicastDelegate) combine(a invocation) multicastDelegate {
+	return d.combineDelegate(multicastDelegate{invocations: []invocation{a}})
+}
+
+func (d multicastDelegate) combineDelegate(follow multicastDelegate) multicastDelegate {
+	followLen := len(follow.invocations)
 	if followLen == 0 {
 		return d
 	}
 
-	var actions []ActionX
-	length := len(d.actions)
+	var invocations []invocation
+	length := len(d.invocations)
 	resultLen := length + followLen
-	if resultLen <= cap(d.actions) {
-		actions = d.actions[:resultLen]
+	if resultLen <= cap(d.invocations) {
+		invocations = d.invocations[:resultLen]
 		for i := 0; i < followLen; i++ {
-			curIndex := length + i
-			cur, a := actions[curIndex], follow.actions[i]
-			if cur == nil {
-				actions[curIndex] = a
-			} else if !funcEqual(cur, a) {
-				actions = nil
+			if !trySetSlot(invocations, length+i, follow.invocations[i]) {
+				invocations = nil
 				break
 			}
 		}
 
-		if actions == nil {
-			actions = make([]ActionX, resultLen)
-			copy(actions, d.actions)
-			copy(actions[length:], follow.actions)
+		if invocations == nil {
+			invocations = make([]invocation, resultLen)
+			copy(invocations, d.invocations)
+			copy(invocations[length:], follow.invocations)
 		}
 	} else {
-		actions = append(d.actions, follow.actions...)
+		invocations = append(d.invocations, follow.invocations...)
 	}
 
-	return Delegate{actions: actions}
+	return multicastDelegate{invocations: invocations}
 }
 
-func (d Delegate) Remove(a ActionX) Delegate {
-	if a == nil {
-		return d
-	}
-
-	lastIndex := len(d.actions) - 1
+func (d multicastDelegate) remove(a invocation) multicastDelegate {
+	lastIndex := len(d.invocations) - 1
 	i := lastIndex
 	for ; i >= 0; i-- {
-		if funcEqual(d.actions[i], a) {
+		if funcPtrEqual(d.invocations[i], a) {
 			break
 		}
 	}
@@ -81,26 +97,38 @@ func (d Delegate) Remove(a ActionX) Delegate {
 	}
 
 	if i == lastIndex {
-		return Delegate{actions: d.actions[:lastIndex]}
+		return multicastDelegate{invocations: d.invocations[:lastIndex]}
 	}
 
 	if i == 0 {
-		return Delegate{actions: d.actions[1:]}
+		return multicastDelegate{invocations: d.invocations[1:]}
 	}
 
-	actions := make([]ActionX, lastIndex)
-	copy(actions, d.actions[:i])
-	copy(actions[i:], d.actions[i+1:])
-	return Delegate{actions: actions}
+	actions := make([]invocation, lastIndex)
+	copy(actions, d.invocations[:i])
+	copy(actions[i:], d.invocations[i+1:])
+	return multicastDelegate{invocations: actions}
 }
 
-func (d Delegate) Invoke(args ...interface{}) {
-	for _, a := range d.actions {
-		a(args...)
+func trySetSlot(invocations []invocation, index int, invocation invocation) bool {
+	if invocations[index].funcPtr == 0 && atomic.CompareAndSwapUintptr((*uintptr)(unsafe.Pointer(&invocations[index])), 0, invocation.funcPtr) {
+		invocations[index].targetPtr = invocation.targetPtr
+		return true
 	}
+
+	cur := invocations[index]
+	if cur.funcPtr != 0 && funcPtrEqual(cur, invocation) {
+		return true
+	}
+
+	return false
 }
 
-func getFuncPtrAndTargetPtr(f interface{}) (uintptr, uintptr) {
+func funcPtrEqual(f1, f2 invocation) bool {
+	return f1.funcPtr == f2.funcPtr && f1.targetPtr == f2.targetPtr
+}
+
+func getInvocation(f interface{}) invocation {
 	type funcHeader struct {
 		funcPtr   uintptr
 		targetPtr uintptr
@@ -110,11 +138,5 @@ func getFuncPtrAndTargetPtr(f interface{}) (uintptr, uintptr) {
 		data *funcHeader
 	}
 	address := (*interfaceHeader)(unsafe.Pointer(&f)).data
-	return address.funcPtr, address.targetPtr
-}
-
-func funcEqual(a interface{}, b interface{}) bool {
-	x1, x2 := getFuncPtrAndTargetPtr(a)
-	y1, y2 := getFuncPtrAndTargetPtr(b)
-	return x1 == y1 && x2 == y2
+	return invocation{address.funcPtr, address.targetPtr}
 }
