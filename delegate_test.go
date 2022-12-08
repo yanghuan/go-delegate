@@ -38,7 +38,7 @@ func TestDelegateCombine(t *testing.T) {
 			s += "c"
 		}
 
-		d := Delegate{}.Combine(f1).Combine(f2).Combine(f3)
+		d := Delegate{}.Combine(nil).Combine(f1).Combine(f2).Combine(f3)
 		d.Invoke()
 		So(s, ShouldEqual, "abc")
 	})
@@ -94,12 +94,12 @@ func TestDelegateRemove(t *testing.T) {
 		So(s, ShouldEqual, "ab")
 		s = ""
 
-		d = Delegate{}.Combine(f1).CombineDelegate(Delegate{}.Combine(f2).Combine(f3))
+		d = Delegate{}.Combine(f1).Combine(f2, f3)
 		d.Invoke()
 		So(s, ShouldEqual, "abc")
 		s = ""
 
-		d = Delegate{}.Combine(f1).Combine(f2).CombineDelegate(Delegate{}.Combine(f2).Combine(f3))
+		d = Delegate{}.Combine(f1).Combine(f2).Combine(f2, f3)
 		d.Invoke()
 		So(s, ShouldEqual, "abbc")
 		s = ""
@@ -139,12 +139,12 @@ func TestDelegateRemove(t *testing.T) {
 		So(s, ShouldEqual, "ab")
 		s = ""
 
-		d = Delegate{}.Combine(h.f1).CombineDelegate(Delegate{}.Combine(h.f2).Combine(h.f3))
+		d = Delegate{}.Combine(h.f1).Combine(h.f2, h.f3)
 		d.Invoke()
 		So(s, ShouldEqual, "abc")
 		s = ""
 
-		d = Delegate{}.Combine(h.f1).Combine(h.f2).CombineDelegate(Delegate{}.Combine(h.f2).Combine(h.f3))
+		d = Delegate{}.Combine(h.f1).Combine(h.f2).Combine(h.f2, h.f3)
 		d.Invoke()
 		So(s, ShouldEqual, "abbc")
 		s = ""

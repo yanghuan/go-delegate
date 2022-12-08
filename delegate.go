@@ -11,26 +11,23 @@ type Delegate struct {
 	multicastDelegate
 }
 
-func (d Delegate) Combine(a FnX) Delegate {
-	if a == nil {
-		return d
-	}
-
-	m := d.combine(getInvocation(a))
+func (d Delegate) Combine(f ...FnX) Delegate {
+	m := d.combine(unsafe.Pointer(&f))
 	return Delegate{m}
 }
 
-func (d Delegate) CombineDelegate(follow Delegate) Delegate {
-	m := d.combineDelegate(follow.multicastDelegate)
+func (d Delegate) CombineDelegate(v Delegate) Delegate {
+	m := d.combineDelegate(v.multicastDelegate)
 	return Delegate{m}
 }
 
-func (d Delegate) Remove(a FnX) Delegate {
-	if a == nil {
-		return d
-	}
+func (d Delegate) Remove(f ...FnX) Delegate {
+	m := d.remove(unsafe.Pointer(&f))
+	return Delegate{m}
+}
 
-	m := d.remove(getInvocation(a))
+func (d Delegate) RemoveDelegate(v Delegate) Delegate {
+	m := d.removeDelegate(v.multicastDelegate)
 	return Delegate{m}
 }
 
@@ -49,11 +46,37 @@ type invocation struct {
 	funcPtr, targetPtr uintptr
 }
 
-func (i invocation) Equals(other invocation) bool {
+func (i invocation) equals(other invocation) bool {
 	return i.funcPtr == other.funcPtr && i.targetPtr == other.targetPtr
 }
 
-func (d multicastDelegate) combine(a invocation) multicastDelegate {
+func (d multicastDelegate) combine(fnPointers unsafe.Pointer) multicastDelegate {
+	fns := *(*[]unsafe.Pointer)(fnPointers)
+	count := len(fns)
+	if count == 0 {
+		return d
+	}
+
+	if count == 1 {
+		fnPointer := fns[0]
+		if fnPointer == nil {
+			return d
+		}
+
+		return d.combineInvocation(getInvocation(fnPointer))
+	}
+
+	invocations := make([]invocation, 0, 9)
+	for _, fnPointer := range fns {
+		if fnPointer == nil {
+			continue
+		}
+		invocations = append(invocations, getInvocation(fnPointer))
+	}
+	return d.combineDelegate(multicastDelegate{invocations: invocations})
+}
+
+func (d multicastDelegate) combineInvocation(a invocation) multicastDelegate {
 	return d.combineDelegate(multicastDelegate{invocations: []invocation{a}})
 }
 
@@ -87,7 +110,34 @@ func (d multicastDelegate) combineDelegate(follow multicastDelegate) multicastDe
 	return multicastDelegate{invocations: invocations}
 }
 
-func (d multicastDelegate) remove(a invocation) multicastDelegate {
+func (d multicastDelegate) remove(fnPointers unsafe.Pointer) multicastDelegate {
+	fns := *(*[]unsafe.Pointer)(fnPointers)
+	count := len(fns)
+	if count == 0 {
+		return d
+	}
+
+	if count == 1 {
+		fnPointer := fns[0]
+		if fnPointer == nil {
+			return d
+		}
+
+		return d.removeInvocation(getInvocation(fnPointer))
+	}
+
+	result := d
+	for i := count - 1; i >= 0; i++ {
+		fnPointer := fns[i]
+		if fnPointer == nil {
+			continue
+		}
+		result = result.removeInvocation(getInvocation(fnPointer))
+	}
+	return result
+}
+
+func (d multicastDelegate) removeInvocation(a invocation) multicastDelegate {
 	return d.removeDelegate(multicastDelegate{invocations: []invocation{a}})
 }
 
@@ -120,36 +170,27 @@ func (d multicastDelegate) removeDelegate(follow multicastDelegate) multicastDel
 
 func equalsInvocations(a, b []invocation, start, count int) bool {
 	for i := 0; i < count; i++ {
-		if !a[start+i].Equals(b[i]) {
+		if !a[start+i].equals(b[i]) {
 			return false
 		}
 	}
 	return true
 }
 
-func trySetSlot(invocations []invocation, index int, invocation invocation) bool {
-	if invocations[index].funcPtr == 0 && atomic.CompareAndSwapUintptr((*uintptr)(unsafe.Pointer(&invocations[index])), 0, invocation.funcPtr) {
-		invocations[index].targetPtr = invocation.targetPtr
+func trySetSlot(invocations []invocation, index int, value invocation) bool {
+	cur := &invocations[index]
+	if cur.funcPtr == 0 && atomic.CompareAndSwapUintptr((*uintptr)(unsafe.Pointer(cur)), 0, value.funcPtr) {
+		cur.targetPtr = value.targetPtr
 		return true
 	}
 
-	cur := invocations[index]
-	if cur.funcPtr != 0 && cur.Equals(invocation) {
+	if cur.funcPtr != 0 && cur.equals(value) {
 		return true
 	}
 
 	return false
 }
 
-func getInvocation(f interface{}) invocation {
-	type funcHeader struct {
-		funcPtr   uintptr
-		targetPtr uintptr
-	}
-	type interfaceHeader struct {
-		typ  uintptr
-		data *funcHeader
-	}
-	address := (*interfaceHeader)(unsafe.Pointer(&f)).data
-	return invocation{address.funcPtr, address.targetPtr}
+func getInvocation(f unsafe.Pointer) invocation {
+	return *(*invocation)(f)
 }
