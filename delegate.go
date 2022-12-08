@@ -11,6 +11,10 @@ type Delegate struct {
 	multicastDelegate
 }
 
+func (d Delegate) Equals(other Delegate) bool {
+	return d.multicastDelegate.equals(other.multicastDelegate)
+}
+
 func (d Delegate) Combine(f ...FnX) Delegate {
 	m := d.combine(unsafe.Pointer(&f))
 	return Delegate{m}
@@ -48,6 +52,21 @@ type invocation struct {
 
 func (i invocation) equals(other invocation) bool {
 	return i.funcPtr == other.funcPtr && i.targetPtr == other.targetPtr
+}
+
+func (d multicastDelegate) equals(other multicastDelegate) bool {
+	count, otherCount := len(d.invocations), len(other.invocations)
+	if count != otherCount {
+		return false
+	}
+
+	for i := 0; i < count; i++ {
+		if !d.invocations[i].equals(other.invocations[i]) {
+			return false
+		}
+	}
+
+	return true
 }
 
 func (d multicastDelegate) combine(fnPointers unsafe.Pointer) multicastDelegate {

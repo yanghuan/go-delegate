@@ -8,6 +8,10 @@ type Action struct {
 	multicastDelegate
 }
 
+func (a Action) Equals(other Action) bool {
+	return a.multicastDelegate.equals(other.multicastDelegate)
+}
+
 func (a Action) Combine(f ...Fn) Action {
 	m := a.combine(unsafe.Pointer(&f))
 	return Action{m}
@@ -39,6 +43,10 @@ type Fn1[T any] func(T)
 
 type Action1[T any] struct {
 	multicastDelegate
+}
+
+func (a Action1[T]) Equals(other Action1[T]) bool {
+	return a.multicastDelegate.equals(other.multicastDelegate)
 }
 
 func (a Action1[T]) Combine(f ...Fn1[T]) Action1[T] {
@@ -74,6 +82,10 @@ type Action2[T1, T2 any] struct {
 	multicastDelegate
 }
 
+func (a Action2[T1, T2]) Equals(other Action2[T1, T2]) bool {
+	return a.multicastDelegate.equals(other.multicastDelegate)
+}
+
 func (a Action2[T1, T2]) Combine(f ...Fn2[T1, T2]) Action2[T1, T2] {
 	m := a.combine(unsafe.Pointer(&f))
 	return Action2[T1, T2]{m}
@@ -105,6 +117,10 @@ type Fn3[T1, T2, T3 any] func(T1, T2, T3)
 
 type Action3[T1, T2, T3 any] struct {
 	multicastDelegate
+}
+
+func (a Action3[T1, T2, T3]) Equals(other Action3[T1, T2, T3]) bool {
+	return a.multicastDelegate.equals(other.multicastDelegate)
 }
 
 func (a Action3[T1, T2, T3]) Combine(f ...Fn3[T1, T2, T3]) Action3[T1, T2, T3] {
@@ -140,6 +156,10 @@ type Action4[T1, T2, T3, T4 any] struct {
 	multicastDelegate
 }
 
+func (a Action4[T1, T2, T3, T4]) Equals(other Action4[T1, T2, T3, T4]) bool {
+	return a.multicastDelegate.equals(other.multicastDelegate)
+}
+
 func (a Action4[T1, T2, T3, T4]) Combine(f ...Fn4[T1, T2, T3, T4]) Action4[T1, T2, T3, T4] {
 	m := a.combine(unsafe.Pointer(&f))
 	return Action4[T1, T2, T3, T4]{m}
@@ -171,6 +191,10 @@ type Fn5[T1, T2, T3, T4, T5 any] func(T1, T2, T3, T4, T5)
 
 type Action5[T1, T2, T3, T4, T5 any] struct {
 	multicastDelegate
+}
+
+func (a Action5[T1, T2, T3, T4, T5]) Equals(other Action5[T1, T2, T3, T4, T5]) bool {
+	return a.multicastDelegate.equals(other.multicastDelegate)
 }
 
 func (a Action5[T1, T2, T3, T4, T5]) Combine(f ...Fn5[T1, T2, T3, T4, T5]) Action5[T1, T2, T3, T4, T5] {
@@ -206,6 +230,10 @@ type Action6[T1, T2, T3, T4, T5, T6 any] struct {
 	multicastDelegate
 }
 
+func (a Action6[T1, T2, T3, T4, T5, T6]) Equals(other Action6[T1, T2, T3, T4, T5, T6]) bool {
+	return a.multicastDelegate.equals(other.multicastDelegate)
+}
+
 func (a Action6[T1, T2, T3, T4, T5, T6]) Combine(f ...Fn6[T1, T2, T3, T4, T5, T6]) Action6[T1, T2, T3, T4, T5, T6] {
 	m := a.combine(unsafe.Pointer(&f))
 	return Action6[T1, T2, T3, T4, T5, T6]{m}
@@ -237,6 +265,10 @@ type Fn7[T1, T2, T3, T4, T5, T6, T7 any] func(T1, T2, T3, T4, T5, T6, T7)
 
 type Action7[T1, T2, T3, T4, T5, T6, T7 any] struct {
 	multicastDelegate
+}
+
+func (a Action7[T1, T2, T3, T4, T5, T6, T7]) Equals(other Action7[T1, T2, T3, T4, T5, T6, T7]) bool {
+	return a.multicastDelegate.equals(other.multicastDelegate)
 }
 
 func (a Action7[T1, T2, T3, T4, T5, T6, T7]) Combine(f ...Fn7[T1, T2, T3, T4, T5, T6, T7]) Action7[T1, T2, T3, T4, T5, T6, T7] {
