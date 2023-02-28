@@ -47,7 +47,7 @@ type multicastDelegate struct {
 }
 
 type invocation struct {
-	funcPtr, targetPtr uintptr
+	funcPtr, targetPtr unsafe.Pointer
 }
 
 func (i invocation) equals(other invocation) bool {
@@ -198,12 +198,12 @@ func equalsInvocations(a, b []invocation, start, count int) bool {
 
 func trySetSlot(invocations []invocation, index int, value invocation) bool {
 	cur := &invocations[index]
-	if cur.funcPtr == 0 && atomic.CompareAndSwapUintptr((*uintptr)(unsafe.Pointer(cur)), 0, value.funcPtr) {
+	if cur.funcPtr == nil && atomic.CompareAndSwapPointer(&cur.funcPtr, nil, value.funcPtr) {
 		cur.targetPtr = value.targetPtr
 		return true
 	}
 
-	if cur.funcPtr != 0 && cur.equals(value) {
+	if cur.funcPtr != nil && cur.equals(value) {
 		return true
 	}
 
