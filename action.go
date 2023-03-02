@@ -32,10 +32,13 @@ func (a Action) RemoveDelegate(v Action) Action {
 	return Action{m}
 }
 
+func (a Action) GetInvocationList() []Fn {
+	return fns[Fn](a.invocations)
+}
+
 func (a Action) Invoke() {
 	for _, invocation := range a.invocations {
-		funcVar := unsafe.Pointer(&invocation)
-		(*(*Fn)(unsafe.Pointer(&funcVar)))()
+		fn[Fn](&invocation)()
 	}
 }
 
@@ -69,10 +72,13 @@ func (a Action1[T]) RemoveDelegate(v Action1[T]) Action1[T] {
 	return Action1[T]{m}
 }
 
+func (a Action1[T]) GetInvocationList() []Fn1[T] {
+	return fns[Fn1[T]](a.invocations)
+}
+
 func (a Action1[T]) Invoke(x T) {
 	for _, invocation := range a.invocations {
-		funcVar := unsafe.Pointer(&invocation)
-		(*(*Fn1[T])(unsafe.Pointer(&funcVar)))(x)
+		fn[Fn1[T]](&invocation)(x)
 	}
 }
 
@@ -106,10 +112,13 @@ func (a Action2[T1, T2]) RemoveDelegate(v Action2[T1, T2]) Action2[T1, T2] {
 	return Action2[T1, T2]{m}
 }
 
+func (a Action2[T1, T2]) GetInvocationList() []Fn2[T1, T2] {
+	return fns[Fn2[T1, T2]](a.invocations)
+}
+
 func (a Action2[T1, T2]) Invoke(x1 T1, x2 T2) {
 	for _, invocation := range a.invocations {
-		funcVar := unsafe.Pointer(&invocation)
-		(*(*Fn2[T1, T2])(unsafe.Pointer(&funcVar)))(x1, x2)
+		fn[Fn2[T1, T2]](&invocation)(x1, x2)
 	}
 }
 
@@ -143,10 +152,13 @@ func (a Action3[T1, T2, T3]) RemoveDelegate(v Action3[T1, T2, T3]) Action3[T1, T
 	return Action3[T1, T2, T3]{m}
 }
 
+func (a Action3[T1, T2, T3]) GetInvocationList() []Fn3[T1, T2, T3] {
+	return fns[Fn3[T1, T2, T3]](a.invocations)
+}
+
 func (a Action3[T1, T2, T3]) Invoke(x1 T1, x2 T2, x3 T3) {
 	for _, invocation := range a.invocations {
-		funcVar := unsafe.Pointer(&invocation)
-		(*(*Fn3[T1, T2, T3])(unsafe.Pointer(&funcVar)))(x1, x2, x3)
+		fn[Fn3[T1, T2, T3]](&invocation)(x1, x2, x3)
 	}
 }
 
@@ -180,10 +192,13 @@ func (a Action4[T1, T2, T3, T4]) RemoveDelegate(v Action4[T1, T2, T3, T4]) Actio
 	return Action4[T1, T2, T3, T4]{m}
 }
 
+func (a Action4[T1, T2, T3, T4]) GetInvocationList() []Fn4[T1, T2, T3, T4] {
+	return fns[Fn4[T1, T2, T3, T4]](a.invocations)
+}
+
 func (a Action4[T1, T2, T3, T4]) Invoke(x1 T1, x2 T2, x3 T3, x4 T4) {
 	for _, invocation := range a.invocations {
-		funcVar := unsafe.Pointer(&invocation)
-		(*(*Fn4[T1, T2, T3, T4])(unsafe.Pointer(&funcVar)))(x1, x2, x3, x4)
+		fn[Fn4[T1, T2, T3, T4]](&invocation)(x1, x2, x3, x4)
 	}
 }
 
@@ -217,10 +232,13 @@ func (a Action5[T1, T2, T3, T4, T5]) RemoveDelegate(v Action5[T1, T2, T3, T4, T5
 	return Action5[T1, T2, T3, T4, T5]{m}
 }
 
+func (a Action5[T1, T2, T3, T4, T5]) GetInvocationList() []Fn5[T1, T2, T3, T4, T5] {
+	return fns[Fn5[T1, T2, T3, T4, T5]](a.invocations)
+}
+
 func (a Action5[T1, T2, T3, T4, T5]) Invoke(x1 T1, x2 T2, x3 T3, x4 T4, x5 T5) {
 	for _, invocation := range a.invocations {
-		funcVar := unsafe.Pointer(&invocation)
-		(*(*Fn5[T1, T2, T3, T4, T5])(unsafe.Pointer(&funcVar)))(x1, x2, x3, x4, x5)
+		fn[Fn5[T1, T2, T3, T4, T5]](&invocation)(x1, x2, x3, x4, x5)
 	}
 }
 
@@ -254,10 +272,13 @@ func (a Action6[T1, T2, T3, T4, T5, T6]) RemoveDelegate(v Action6[T1, T2, T3, T4
 	return Action6[T1, T2, T3, T4, T5, T6]{m}
 }
 
-func (a Action6[T1, T2, T3, T4, T5, T6]) Invoke(x1 T1, x2 T2, x3 T3, x4 T4, x5 T5) {
+func (a Action6[T1, T2, T3, T4, T5, T6]) GetInvocationList() []Fn6[T1, T2, T3, T4, T5, T6] {
+	return fns[Fn6[T1, T2, T3, T4, T5, T6]](a.invocations)
+}
+
+func (a Action6[T1, T2, T3, T4, T5, T6]) Invoke(x1 T1, x2 T2, x3 T3, x4 T4, x5 T5, x6 T6) {
 	for _, invocation := range a.invocations {
-		funcVar := unsafe.Pointer(&invocation)
-		(*(*Fn5[T1, T2, T3, T4, T5])(unsafe.Pointer(&funcVar)))(x1, x2, x3, x4, x5)
+		fn[Fn6[T1, T2, T3, T4, T5, T6]](&invocation)(x1, x2, x3, x4, x5, x6)
 	}
 }
 
@@ -291,9 +312,12 @@ func (a Action7[T1, T2, T3, T4, T5, T6, T7]) RemoveDelegate(v Action5[T1, T2, T3
 	return Action7[T1, T2, T3, T4, T5, T6, T7]{m}
 }
 
+func (a Action7[T1, T2, T3, T4, T5, T6, T7]) GetInvocationList() []Fn7[T1, T2, T3, T4, T5, T6, T7] {
+	return fns[Fn7[T1, T2, T3, T4, T5, T6, T7]](a.invocations)
+}
+
 func (a Action7[T1, T2, T3, T4, T5, T6, T7]) Invoke(x1 T1, x2 T2, x3 T3, x4 T4, x5 T5, x6 T6, x7 T7) {
 	for _, invocation := range a.invocations {
-		funcVar := unsafe.Pointer(&invocation)
-		(*(*Fn7[T1, T2, T3, T4, T5, T6, T7])(unsafe.Pointer(&funcVar)))(x1, x2, x3, x4, x5, x6, x7)
+		fn[Fn7[T1, T2, T3, T4, T5, T6, T7]](&invocation)(x1, x2, x3, x4, x5, x6, x7)
 	}
 }

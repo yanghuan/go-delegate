@@ -35,10 +35,13 @@ func (d Delegate) RemoveDelegate(v Delegate) Delegate {
 	return Delegate{m}
 }
 
+func (d Delegate) GetInvocationList() []FnX {
+	return fns[FnX](d.invocations)
+}
+
 func (d Delegate) Invoke(args ...interface{}) {
 	for _, invocation := range d.invocations {
-		funcVar := unsafe.Pointer(&invocation)
-		(*(*FnX)(unsafe.Pointer(&funcVar)))(args...)
+		fn[FnX](&invocation)(args...)
 	}
 }
 
@@ -212,4 +215,17 @@ func trySetSlot(invocations []invocation, index int, value invocation) bool {
 
 func getInvocation(f unsafe.Pointer) invocation {
 	return *(*invocation)(f)
+}
+
+func fn[F any](i *invocation) F {
+	return *(*F)(unsafe.Pointer(&i))
+}
+
+func fns[F any](invocations []invocation) []F {
+	list := make([]F, 0, len(invocations))
+	for _, i := range invocations {
+		invocation := i
+		list = append(list, fn[F](&invocation))
+	}
+	return list
 }
