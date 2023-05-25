@@ -8,7 +8,7 @@ import (
 type FnX func(args ...interface{})
 
 type Delegate struct {
-	multicastDelegate
+	multicastDelegate[FnX]
 }
 
 func (d Delegate) Equals(other Delegate) bool {
@@ -16,7 +16,7 @@ func (d Delegate) Equals(other Delegate) bool {
 }
 
 func (d Delegate) Combine(f ...FnX) Delegate {
-	m := d.combine(unsafe.Pointer(&f))
+	m := d.combine(f)
 	return Delegate{m}
 }
 
@@ -26,7 +26,7 @@ func (d Delegate) CombineDelegate(v Delegate) Delegate {
 }
 
 func (d Delegate) Remove(f ...FnX) Delegate {
-	m := d.remove(unsafe.Pointer(&f))
+	m := d.remove(f)
 	return Delegate{m}
 }
 
@@ -36,35 +36,51 @@ func (d Delegate) RemoveDelegate(v Delegate) Delegate {
 }
 
 func (d Delegate) GetInvocationList() []FnX {
-	return fns[FnX](d.invocations)
+	return d.invocations
 }
 
 func (d Delegate) Invoke(args ...interface{}) {
 	for _, invocation := range d.invocations {
-		fn[FnX](&invocation)(args...)
+		invocation(args...)
 	}
 }
 
-type multicastDelegate struct {
-	invocations []invocation
+type multicastDelegate[F any] struct {
+	invocations []F
 }
 
 type invocation struct {
-	funcPtr, targetPtr unsafe.Pointer
+	funcPtr, targetPtr uintptr
 }
 
 func (i invocation) equals(other invocation) bool {
 	return i.funcPtr == other.funcPtr && i.targetPtr == other.targetPtr
 }
 
-func (d multicastDelegate) equals(other multicastDelegate) bool {
+func toPointer[F any](f F) unsafe.Pointer {
+	return *(*unsafe.Pointer)(unsafe.Pointer(&f))
+}
+
+func toInvocation[F any](f F) invocation {
+	return *(*invocation)(toPointer(f))
+}
+
+func equals[F any](a, b F) bool {
+	return toInvocation(a).equals(toInvocation(b))
+}
+
+func isNil[F any](f F) bool {
+	return toPointer(f) == nil
+}
+
+func (d multicastDelegate[F]) equals(other multicastDelegate[F]) bool {
 	count, otherCount := len(d.invocations), len(other.invocations)
 	if count != otherCount {
 		return false
 	}
 
 	for i := 0; i < count; i++ {
-		if !d.invocations[i].equals(other.invocations[i]) {
+		if !equals(d.invocations[i], other.invocations[i]) {
 			return false
 		}
 	}
@@ -72,43 +88,42 @@ func (d multicastDelegate) equals(other multicastDelegate) bool {
 	return true
 }
 
-func (d multicastDelegate) combine(fnPointers unsafe.Pointer) multicastDelegate {
-	fns := *(*[]unsafe.Pointer)(fnPointers)
+func (d multicastDelegate[F]) combine(fns []F) multicastDelegate[F] {
 	count := len(fns)
 	if count == 0 {
 		return d
 	}
 
 	if count == 1 {
-		fnPointer := fns[0]
-		if fnPointer == nil {
+		f := fns[0]
+		if isNil(f) {
 			return d
 		}
 
-		return d.combineInvocation(getInvocation(fnPointer))
+		return d.combineInvocation(f)
 	}
 
-	invocations := make([]invocation, 0, 9)
-	for _, fnPointer := range fns {
-		if fnPointer == nil {
+	invocations := make([]F, 0, 9)
+	for _, f := range fns {
+		if isNil(f) {
 			continue
 		}
-		invocations = append(invocations, getInvocation(fnPointer))
+		invocations = append(invocations, f)
 	}
-	return d.combineDelegate(multicastDelegate{invocations: invocations})
+	return d.combineDelegate(multicastDelegate[F]{invocations: invocations})
 }
 
-func (d multicastDelegate) combineInvocation(a invocation) multicastDelegate {
-	return d.combineDelegate(multicastDelegate{invocations: []invocation{a}})
+func (d multicastDelegate[F]) combineInvocation(f F) multicastDelegate[F] {
+	return d.combineDelegate(multicastDelegate[F]{invocations: []F{f}})
 }
 
-func (d multicastDelegate) combineDelegate(follow multicastDelegate) multicastDelegate {
+func (d multicastDelegate[F]) combineDelegate(follow multicastDelegate[F]) multicastDelegate[F] {
 	followLen := len(follow.invocations)
 	if followLen == 0 {
 		return d
 	}
 
-	var invocations []invocation
+	var invocations []F
 	length := len(d.invocations)
 	resultLen := length + followLen
 	if resultLen <= cap(d.invocations) {
@@ -121,7 +136,7 @@ func (d multicastDelegate) combineDelegate(follow multicastDelegate) multicastDe
 		}
 
 		if invocations == nil {
-			invocations = make([]invocation, resultLen)
+			invocations = make([]F, resultLen)
 			copy(invocations, d.invocations)
 			copy(invocations[length:], follow.invocations)
 		}
@@ -129,41 +144,40 @@ func (d multicastDelegate) combineDelegate(follow multicastDelegate) multicastDe
 		invocations = append(d.invocations, follow.invocations...)
 	}
 
-	return multicastDelegate{invocations: invocations}
+	return multicastDelegate[F]{invocations: invocations}
 }
 
-func (d multicastDelegate) remove(fnPointers unsafe.Pointer) multicastDelegate {
-	fns := *(*[]unsafe.Pointer)(fnPointers)
+func (d multicastDelegate[F]) remove(fns []F) multicastDelegate[F] {
 	count := len(fns)
 	if count == 0 {
 		return d
 	}
 
 	if count == 1 {
-		fnPointer := fns[0]
-		if fnPointer == nil {
+		f := fns[0]
+		if isNil(f) {
 			return d
 		}
 
-		return d.removeInvocation(getInvocation(fnPointer))
+		return d.removeInvocation(f)
 	}
 
 	result := d
 	for i := count - 1; i >= 0; i++ {
-		fnPointer := fns[i]
-		if fnPointer == nil {
+		f := fns[i]
+		if isNil(f) {
 			continue
 		}
-		result = result.removeInvocation(getInvocation(fnPointer))
+		result = result.removeInvocation(f)
 	}
 	return result
 }
 
-func (d multicastDelegate) removeInvocation(a invocation) multicastDelegate {
-	return d.removeDelegate(multicastDelegate{invocations: []invocation{a}})
+func (d multicastDelegate[F]) removeInvocation(f F) multicastDelegate[F] {
+	return d.removeDelegate(multicastDelegate[F]{invocations: []F{f}})
 }
 
-func (d multicastDelegate) removeDelegate(follow multicastDelegate) multicastDelegate {
+func (d multicastDelegate[F]) removeDelegate(follow multicastDelegate[F]) multicastDelegate[F] {
 	followLen := len(follow.invocations)
 	if followLen == 0 {
 		return d
@@ -173,59 +187,41 @@ func (d multicastDelegate) removeDelegate(follow multicastDelegate) multicastDel
 	diffLength := length - followLen
 	for i := diffLength; i >= 0; i-- {
 		if equalsInvocations(d.invocations, follow.invocations, i, followLen) {
-			var invocations []invocation
+			var invocations []F
 			if i == 0 {
 				invocations = d.invocations[followLen:]
 			} else if i == diffLength {
 				invocations = d.invocations[:diffLength]
 			} else {
-				invocations := make([]invocation, diffLength)
+				invocations := make([]F, diffLength)
 				copy(invocations, d.invocations[:i])
 				copy(invocations[i:], d.invocations[i+followLen:])
 			}
-			return multicastDelegate{invocations}
+			return multicastDelegate[F]{invocations}
 		}
 	}
 
 	return d
 }
 
-func equalsInvocations(a, b []invocation, start, count int) bool {
+func equalsInvocations[F any](a, b []F, start, count int) bool {
 	for i := 0; i < count; i++ {
-		if !a[start+i].equals(b[i]) {
+		if !equals(a[start+i], b[i]) {
 			return false
 		}
 	}
 	return true
 }
 
-func trySetSlot(invocations []invocation, index int, value invocation) bool {
+func trySetSlot[F any](invocations []F, index int, value F) bool {
 	cur := &invocations[index]
-	if cur.funcPtr == nil && atomic.CompareAndSwapPointer(&cur.funcPtr, nil, value.funcPtr) {
-		cur.targetPtr = value.targetPtr
+	if isNil(*cur) {
+		if atomic.CompareAndSwapPointer((*unsafe.Pointer)(unsafe.Pointer(cur)), nil, toPointer(value)) {
+			*cur = value
+			return true
+		}
+	} else if equals(*cur, value) {
 		return true
 	}
-
-	if cur.funcPtr != nil && cur.equals(value) {
-		return true
-	}
-
 	return false
-}
-
-func getInvocation(f unsafe.Pointer) invocation {
-	return *(*invocation)(f)
-}
-
-func fn[F any](i *invocation) F {
-	return *(*F)(unsafe.Pointer(&i))
-}
-
-func fns[F any](invocations []invocation) []F {
-	list := make([]F, 0, len(invocations))
-	for _, i := range invocations {
-		invocation := i
-		list = append(list, fn[F](&invocation))
-	}
-	return list
 }

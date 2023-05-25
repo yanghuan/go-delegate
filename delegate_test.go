@@ -1,10 +1,8 @@
 package delegate
 
 import (
-	"testing"
-	"unsafe"
-
 	. "github.com/smartystreets/goconvey/convey"
+	"testing"
 )
 
 type testDelegateHelper struct {
@@ -57,8 +55,6 @@ func TestDelegateCombine(t *testing.T) {
 		h := &testDelegateHelper{s: &s}
 
 		d := Delegate{}
-		println(uintptr(unsafe.Pointer(&d)))
-
 		d = d.Combine(h.f1).Combine(h.f2).Combine(h.f3)
 		e := d.Combine(h.f1)
 		d = d.Combine(h.f2)
