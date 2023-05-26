@@ -193,7 +193,7 @@ func (d multicastDelegate[F]) removeDelegate(follow multicastDelegate[F]) multic
 			} else if i == diffLength {
 				invocations = d.invocations[:diffLength]
 			} else {
-				invocations := make([]F, diffLength)
+				invocations = make([]F, diffLength)
 				copy(invocations, d.invocations[:i])
 				copy(invocations[i:], d.invocations[i+followLen:])
 			}
